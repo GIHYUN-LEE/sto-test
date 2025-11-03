@@ -1,0 +1,61 @@
+name: contracts-ci-cd
+
+on:
+  pull_request:
+    branches: [ main ]       
+  push:
+    branches: [ main ]      
+    tags: ['v*.*.*']         
+
+jobs:
+  build-test:
+    runs-on: [self-hosted, sto, contracts]   
+    steps:
+      - uses: actions/checkout@v4            
+
+      - name: Ensure Foundry                 
+        run: |
+          if ! command -v ~/.foundry/bin/forge >/dev/null; then
+            curl -L https://foundry.paradigm.xyz | bash
+            ~/.foundry/bin/foundryup
+          fi
+          ~/.foundry/bin/forge --version
+          ~/.foundry/bin/cast --version
+
+      - name: Forge deps & build              
+        run: |
+          ~/.foundry/bin/forge install --no-commit OpenZeppelin/openzeppelin-contracts-upgradeable || true
+          ~/.foundry/bin/forge build
+
+      - name: Tests                           
+        run: ~/.foundry/bin/forge test -vvv
+
+
+  prod-deploy:
+    if: startsWith(github.ref, 'refs/tags/v')             
+    needs: [build-test]                                   
+    runs-on: [self-hosted, sto, contracts, prod]          
+    environment: production                               
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load Secrets & Vars                         
+        run: |
+          echo "RPC_URL=${{ secrets.RPC_URL_PROD }}"   >> $GITHUB_ENV
+          echo "DEPLOYER_PK=${{ secrets.DEPLOYER_PK_PROD }}" >> $GITHUB_ENV
+          echo "CHAIN_ID=${{ vars.CHAIN_ID_PROD }}"    >> $GITHUB_ENV
+
+      - name: Deploy                                     
+        run: |
+          ~/.foundry/bin/forge script script/test_script.sol:DeployHello \
+            --rpc-url "$RPC_URL" \
+            --broadcast \
+            --chain-id "$CHAIN_ID" \
+            --private-key "$DEPLOYER_PK" \
+            -vvvv | tee deploy.log
+
+      - name: Archive deployment (placeholder)           
+        run: |
+          mkdir -p deployments/$CHAIN_ID/${GITHUB_REF#refs/tags/}
+        
+          echo "done"
