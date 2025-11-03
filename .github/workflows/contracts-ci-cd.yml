@@ -45,13 +45,16 @@ jobs:
           echo "DEPLOYER_PK=${{ secrets.DEPLOYER_PK_PROD }}" >> $GITHUB_ENV
           echo "CHAIN_ID=${{ vars.CHAIN_ID_PROD }}"    >> $GITHUB_ENV
 
-      - name: Deploy                                     
+      - name: Deploy
         run: |
-          ~/.foundry/bin/forge script script/test_script.sol:DeployHello \
+          set -euo pipefail
+          "$HOME/.foundry/bin/forge" script script/test_script.sol:DeployHello \
             --rpc-url "$RPC_URL" \
             --broadcast \
             --chain-id "$CHAIN_ID" \
             --private-key "$DEPLOYER_PK" \
+            --legacy \
+            --gas-price 0 \
             -vvvv | tee deploy.log
 
       - name: Archive deployment (placeholder)           
