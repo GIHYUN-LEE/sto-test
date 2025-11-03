@@ -24,7 +24,7 @@ jobs:
 
       - name: Forge deps & build              
         run: |
-          ~/.foundry/bin/forge install --no-commit OpenZeppelin/openzeppelin-contracts-upgradeable || true
+          ~/.foundry/bin/forge install OpenZeppelin/openzeppelin-contracts-upgradeable || true
           ~/.foundry/bin/forge build
 
       - name: Tests                           
